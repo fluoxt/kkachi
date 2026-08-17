@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>까치 리더</title>
+    <meta name="description" content="웹소설 번역본 리더">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════
+           Reset & Variables
+           ═══════════════════════════════════════ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #FAF6F0;
+            --bg-elevated: #FFFFFF;
+            --text: #3D3229;
+            --text-secondary: #6B5D4F;
+            --text-tertiary: #9A8B7A;
+            --accent: #8B7355;
+            --accent-hover: #6E5A42;
+            --accent-light: #D4C5B0;
+            --border: #E8DFD3;
+            --dialogue-border: #C7B8A3;
+            --dialogue-bg: rgba(199, 184, 163, 0.07);
+            --thought-color: #7A6B5A;
+            --progress-color: #8B7355;
+            --shadow-sm: 0 1px 3px rgba(61, 50, 41, 0.06);
+            --shadow-md: 0 4px 12px rgba(61, 50, 41, 0.1);
+            --shadow-lg: 0 8px 24px rgba(61, 50, 41, 0.14);
+            --font-body: 'Noto Serif KR', 'Batang', Georgia, serif;
+            --font-size: 18px;
+            --line-height: 1.9;
+            --content-width: 680px;
+            --fast: 0.15s ease;
+            --normal: 0.3s ease;
+        }
+
+        /* ═══════════════════════════════════════
+           Base
+           ═══════════════════════════════════════ */
+        html {
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        button {
+            font-family: var(--font-body);
+            cursor: pointer;
+        }
+
+        /* ═══════════════════════════════════════
+           Progress Bar
+           ═══════════════════════════════════════ */
+        #progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--progress-color);
+            width: 0%;
+            z-index: 200;
+            transition: width 0.08s linear;
+            pointer-events: none;
+            display: none;
+        }
+
+        /* ═══════════════════════════════════════
+           Views & Transitions
+           ═══════════════════════════════════════ */
+        .view { display: none; }
+        .view.active {
+            display: block;
+            animation: viewIn 0.35s ease;
+        }
+        @keyframes viewIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ═══════════════════════════════════════
+           Library — Header
+           ═══════════════════════════════════════ */
+        .library-header {
+            text-align: center;
+            padding: 64px 24px 40px;
+            position: relative;
+        }
+        .library-title {
+            font-size: 2.6rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: 0.18em;
+            margin-bottom: 6px;
+        }
+        .library-subtitle {
+            font-size: 0.92rem;
+            color: var(--text-tertiary);
+            font-weight: 300;
+            letter-spacing: 0.02em;
+        }
+        .refresh-btn {
+            position: absolute;
+            right: 24px;
+            top: 64px;
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-tertiary);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 1.15rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--fast);
+            line-height: 1;
+        }
+        .refresh-btn:hover {
+            color: var(--accent);
+            border-color: var(--accent-light);
+            background: var(--bg-elevated);
+        }
+        .refresh-btn.spinning {
+            animation: spin 0.6s linear;
+            pointer-events: none;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        /* ═══════════════════════════════════════
+           Library — Continue Reading
+           ═══════════════════════════════════════ */
+        .continue-card {
+            max-width: var(--content-width);
+            margin: 0 auto 28px;
+            padding: 14px 24px;
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+            transition: all var(--fast);
+            border: 1px solid var(--border);
+        }
+        .continue-card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent-light);
+        }
+        .continue-label {
+            font-size: 0.78rem;
+            color: var(--accent);
+            font-weight: 600;
+            white-space: nowrap;
+            letter-spacing: 0.06em;
+        }
+        .continue-title {
+            flex: 1;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .continue-arrow {
+            color: var(--accent-light);
+            font-size: 1.1rem;
+            transition: transform var(--fast);
+        }
+        .continue-card:hover .continue-arrow {
+            transform: translateX(3px);
+        }
+
+        /* ═══════════════════════════════════════
+           Library — Chapter List
+           ═══════════════════════════════════════ */
+        .chapter-list {
+            max-width: var(--content-width);
+            margin: 0 auto;
+            padding: 0 24px 64px;
+        }
+        .chapter-item {
+            display: flex;
+            align-items: baseline;
+            padding: 18px 4px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: all var(--fast);
+            gap: 18px;
+            text-decoration: none;
+            color: inherit;
+        }
+        .chapter-item:first-child {
+            border-top: 1px solid var(--border);
+        }
+        .chapter-item:hover {
+            padding-left: 10px;
+        }
+        .chapter-item:hover .ch-num {
+            color: var(--accent);
+        }
+        .ch-num {
+            font-size: 0.82rem;
+            color: var(--text-tertiary);
+            min-width: 28px;
+            font-weight: 400;
+            transition: color var(--fast);
+            font-variant-numeric: tabular-nums;
+        }
+        .ch-title {
+            flex: 1;
+            font-size: 1.02rem;
+            color: var(--text);
+            font-weight: 400;
+            line-height: 1.4;
+        }
+        .ch-read {
+            font-size: 0.72rem;
+            color: var(--accent-light);
+            white-space: nowrap;
+            letter-spacing: 0.04em;
+        }
+
+        /* ═══════════════════════════════════════
+           Library — States
+           ═══════════════════════════════════════ */
+        .state-msg {
+            text-align: center;
+            padding: 72px 24px;
+        }
+        .state-icon {
+            font-size: 2.2rem;
+            margin-bottom: 14px;
+            opacity: 0.55;
+        }
+        .state-title {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .state-desc {
+            font-size: 0.88rem;
+            color: var(--text-tertiary);
+            line-height: 1.5;
+        }
+        .retry-btn {
+            margin-top: 20px;
+            padding: 8px 24px;
+            background: none;
+            border: 1px solid var(--accent-light);
+            color: var(--accent);
+            font-size: 0.88rem;
+            border-radius: 6px;
+            transition: all var(--fast);
+        }
+        .retry-btn:hover {
+            background: var(--bg-elevated);
+            border-color: var(--accent);
+        }
+
+        /* ═══════════════════════════════════════
+           Reader — Top Bar
+           ═══════════════════════════════════════ */
+        .reader-topbar {
+            position: sticky;
+            top: 0;
+            background: rgba(250, 246, 240, 0.92);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 11px 20px;
+            z-index: 100;
+        }
+        .topbar-btn {
+            background: none;
+            border: none;
+            font-size: 0.88rem;
+            color: var(--accent);
+            padding: 5px 8px;
+            transition: color var(--fast);
+            white-space: nowrap;
+        }
+        .topbar-btn:hover {
+            color: var(--accent-hover);
+        }
+        .topbar-title {
+            flex: 1;
+            text-align: center;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 0 12px;
+        }
+        .settings-btn-text {
+            font-weight: 600;
+            font-size: 0.92rem;
+            letter-spacing: 0.01em;
+        }
+
+        /* ═══════════════════════════════════════
+           Reader — Content
+           ═══════════════════════════════════════ */
+        .reader-content {
+            max-width: var(--content-width);
+            margin: 0 auto;
+            padding: 44px 24px 56px;
+            font-size: var(--font-size);
+            line-height: var(--line-height);
+        }
+        .reader-content .chapter-heading {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 2.2em;
+            text-align: center;
+            letter-spacing: 0.06em;
+            color: var(--text);
+            line-height: 1.3;
+        }
+        .reader-content p {
+            margin-bottom: 0.55em;
+            word-break: keep-all;
+            overflow-wrap: break-word;
+        }
+
+        /* Alpha dialogue 『…』 */
+        .reader-content p.dialogue-alpha {
+        }
+
+        /* Scene break */
+        .scene-break {
+            text-align: center;
+            padding: 1.6em 0;
+            color: var(--accent-light);
+            font-size: 1em;
+            letter-spacing: 0.6em;
+            user-select: none;
+        }
+
+        /* ═══════════════════════════════════════
+           Reader — Bottom Nav
+           ═══════════════════════════════════════ */
+        .reader-bottomnav {
+            max-width: var(--content-width);
+            margin: 0 auto;
+            padding: 28px 24px 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid var(--border);
+        }
+        .nav-btn {
+            background: none;
+            border: 1px solid var(--border);
+            font-size: 0.88rem;
+            color: var(--accent);
+            padding: 9px 18px;
+            border-radius: 6px;
+            transition: all var(--fast);
+            white-space: nowrap;
+        }
+        .nav-btn:hover:not(:disabled) {
+            background: var(--bg-elevated);
+            border-color: var(--accent-light);
+            box-shadow: var(--shadow-sm);
+        }
+        .nav-btn:disabled {
+            opacity: 0.28;
+            cursor: default;
+        }
+        .nav-info {
+            font-size: 0.82rem;
+            color: var(--text-tertiary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ═══════════════════════════════════════
+           Settings Overlay
+           ═══════════════════════════════════════ */
+        .settings-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(61, 50, 41, 0.25);
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: overlayIn 0.2s ease;
+        }
+        @keyframes overlayIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+        .settings-panel {
+            background: var(--bg-elevated);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            width: 90%;
+            max-width: 380px;
+            overflow: hidden;
+            animation: panelIn 0.3s ease;
+        }
+        @keyframes panelIn {
+            from { transform: translateY(16px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+        .settings-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .settings-header h3 {
+            font-size: 0.98rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .settings-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.15rem;
+            color: var(--text-tertiary);
+            padding: 4px;
+            transition: color var(--fast);
+        }
+        .settings-close-btn:hover {
+            color: var(--text);
+        }
+        .settings-body {
+            padding: 20px;
+        }
+        .setting-group {
+            margin-bottom: 22px;
+        }
+        .setting-label {
+            display: block;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            font-weight: 400;
+        }
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider-icon {
+            font-size: 0.82rem;
+            color: var(--text-tertiary);
+            user-select: none;
+            width: 18px;
+            text-align: center;
+        }
+        .slider-icon-sm { font-size: 0.72rem; }
+        .slider-icon-lg { font-size: 1.2rem; }
+        .slider-row input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            outline: none;
+        }
+        .slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform var(--fast);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+        }
+        .slider-row input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.12);
+        }
+        .slider-row input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+        }
+        .slider-val {
+            font-size: 0.78rem;
+            color: var(--text-tertiary);
+            min-width: 34px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .preview-box {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 16px;
+            font-size: var(--font-size);
+            line-height: var(--line-height);
+            color: var(--text);
+            border: 1px solid var(--border);
+            transition: font-size 0.15s ease, line-height 0.15s ease;
+        }
+
+        /* ═══════════════════════════════════════
+           Scrollbar
+           ═══════════════════════════════════════ */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-light);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
+        /* ═══════════════════════════════════════
+           Responsive
+           ═══════════════════════════════════════ */
+        @media (max-width: 640px) {
+            .library-header { padding: 44px 16px 28px; }
+            .library-title  { font-size: 2rem; }
+            .chapter-list   { padding: 0 16px 44px; }
+            .continue-card  { margin-left: 16px; margin-right: 16px; }
+            .reader-content { padding: 32px 18px 44px; }
+            .reader-topbar  { padding: 10px 14px; }
+            .reader-bottomnav { padding: 24px 18px 44px; }
+            .refresh-btn    { right: 16px; top: 44px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Reading progress bar -->
+    <div id="progress-bar"></div>
+
+    <!-- ═══════════════════════════════════════
+         Library View
+         ═══════════════════════════════════════ -->
+    <main id="library-view" class="view active">
+        <header class="library-header">
+            <h1 class="library-title">까치</h1>
+            <p id="library-subtitle" class="library-subtitle"></p>
+            <button id="refresh-btn" class="refresh-btn" title="새로고침" aria-label="새로고침">↻</button>
+        </header>
+
+        <div id="continue-reading" class="continue-card" style="display:none">
+            <span class="continue-label">이어 읽기</span>
+            <span id="continue-title" class="continue-title"></span>
+            <span class="continue-arrow">→</span>
+        </div>
+
+        <div id="chapter-list" class="chapter-list" style="display:none"></div>
+
+        <div id="loading-state" class="state-msg">
+            <p class="state-icon">◌</p>
+            <p class="state-title">불러오는 중…</p>
+        </div>
+
+        <div id="error-state" class="state-msg" style="display:none">
+            <p class="state-icon">⚠</p>
+            <p class="state-title">서버에 연결할 수 없습니다</p>
+            <p class="state-desc">start.bat를 실행한 후 다시 시도해 주세요</p>
+            <button id="retry-btn" class="retry-btn">다시 시도</button>
+        </div>
+
+        <div id="empty-state" class="state-msg" style="display:none">
+            <p class="state-icon">📖</p>
+            <p class="state-title">번역이 완료된 챕터가 없습니다</p>
+            <p class="state-desc">번역이 완료되면 여기에 자동으로 표시됩니다</p>
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════
+         Reader View
+         ═══════════════════════════════════════ -->
+    <main id="reader-view" class="view">
+        <nav class="reader-topbar" id="reader-topbar">
+            <button id="back-btn" class="topbar-btn">← 서재</button>
+            <span id="reader-title" class="topbar-title"></span>
+            <button id="settings-btn" class="topbar-btn settings-btn-text">Aa</button>
+        </nav>
+
+        <article id="reader-content" class="reader-content"></article>
+
+        <nav class="reader-bottomnav">
+            <button id="prev-btn" class="nav-btn">← 이전 화</button>
+            <span id="nav-info" class="nav-info"></span>
+            <button id="next-btn" class="nav-btn">다음 화 →</button>
+        </nav>
+    </main>
+
+    <!-- ═══════════════════════════════════════
+         Settings Overlay
+         ═══════════════════════════════════════ -->
+    <div id="settings-overlay" class="settings-overlay" style="display:none">
+        <div class="settings-panel">
+            <div class="settings-header">
+                <h3>읽기 설정</h3>
+                <button id="settings-close" class="settings-close-btn" aria-label="닫기">✕</button>
+            </div>
+            <div class="settings-body">
+                <div class="setting-group">
+                    <label class="setting-label">글꼴 크기</label>
+                    <div class="slider-row">
+                        <span class="slider-icon slider-icon-sm">가</span>
+                        <input type="range" id="font-size-slider" min="14" max="28" step="1" value="18">
+                        <span class="slider-icon slider-icon-lg">가</span>
+                        <span id="font-size-val" class="slider-val">18px</span>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">줄 간격</label>
+                    <div class="slider-row">
+                        <span class="slider-icon">≡</span>
+                        <input type="range" id="line-height-slider" min="1.4" max="2.6" step="0.1" value="1.9">
+                        <span class="slider-icon">⫶</span>
+                        <span id="line-height-val" class="slider-val">1.9</span>
+                    </div>
+                </div>
+                <div id="preview-box" class="preview-box">
+                    <p>아키라는 다시 쿠즈스하라 시가지 유적에 왔다. 이번에는 지난번 실수를 되풀이하지 않으려고 처음부터 알파의 지시를 따라 신중하게 나아갔다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         JavaScript
+         ═══════════════════════════════════════ -->
+    <script>
+    (function () {
+        'use strict';
+
+        /* ── Storage keys ─────────────────── */
+        const SK = {
+            SETTINGS:  'kkachi-settings',
+            READ:      'kkachi-read',
+            SCROLL:    'kkachi-scroll',
+            LAST_READ: 'kkachi-last',
+        };
+
+        /* ── State ────────────────────────── */
+        const state = {
+            chapters: [],
+            idx: -1,
+            settings: { fontSize: 18, lineHeight: 1.9 },
+            view: 'library',
+        };
+
+        /* ── DOM cache ────────────────────── */
+        const $ = id => document.getElementById(id);
+        const dom = {};
+
+        function cacheDom() {
+            dom.libraryView    = $('library-view');
+            dom.readerView     = $('reader-view');
+            dom.progressBar    = $('progress-bar');
+            dom.subtitle       = $('library-subtitle');
+            dom.chapterList    = $('chapter-list');
+            dom.continueCard   = $('continue-reading');
+            dom.continueTitle  = $('continue-title');
+            dom.loadingState   = $('loading-state');
+            dom.errorState     = $('error-state');
+            dom.emptyState     = $('empty-state');
+            dom.readerTitle    = $('reader-title');
+            dom.readerContent  = $('reader-content');
+            dom.prevBtn        = $('prev-btn');
+            dom.nextBtn        = $('next-btn');
+            dom.navInfo        = $('nav-info');
+            dom.settingsOvl    = $('settings-overlay');
+            dom.fontSlider     = $('font-size-slider');
+            dom.lhSlider       = $('line-height-slider');
+            dom.fontVal        = $('font-size-val');
+            dom.lhVal          = $('line-height-val');
+            dom.preview        = $('preview-box');
+        }
+
+        /* ── Storage helpers ──────────────── */
+        function load(key, fallback) {
+            try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+            catch { return fallback; }
+        }
+        function save(key, val) {
+            try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+        }
+
+        /* ── Fetch with retry ─────────────── */
+        async function fetchRetry(url, retries = 6, delay = 800) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await fetch(url);
+                    if (res.ok) return res;
+                    if (res.status >= 400 && res.status < 500) throw new Error('HTTP ' + res.status);
+                } catch (e) {
+                    if (i === retries - 1) throw e;
+                }
+                await new Promise(r => setTimeout(r, delay));
+            }
+            throw new Error('Max retries');
+        }
+
+        /* ── Parsing ──────────────────────── */
+        function parseContent(raw) {
+            let body = raw;
+            const fm = {};
+
+            // Frontmatter
+            const m = body.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+            if (m) {
+                body = body.slice(m[0].length);
+                m[1].split('\n').forEach(line => {
+                    const ci = line.indexOf(':');
+                    if (ci > 0) {
+                        fm[line.slice(0, ci).trim()] = line.slice(ci + 1).trim().replace(/^"|"$/g, '');
+                    }
+                });
+            }
+
+            // Title
+            let title = '';
+            const tm = body.match(/^\s*(?:#\s*)?(제\d+화\s+[^\r\n]+)/m);
+            if (tm) {
+                title = tm[1].trim();
+                body = body.replace(/^\s*(?:#\s*)?제\d+화\s+[^\r\n]+\r?\n?/, '');
+            }
+
+            return { fm, title, body: body.trim() };
+        }
+
+        function escHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function renderBody(body) {
+            // Normalize
+            body = body.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            // Mark scene breaks (3+ newlines)
+            body = body.replace(/\n{3,}/g, '\n\n{{SCENE}}\n\n');
+            // Split into blocks
+            const parts = body.split(/\n\n+/);
+            const out = [];
+
+            for (const part of parts) {
+                const t = part.trim();
+                if (!t) continue;
+                if (t === '{{SCENE}}') {
+                    out.push('<div class="scene-break" role="separator">· · ·</div>');
+                    continue;
+                }
+                out.push(makeParagraph(t));
+            }
+            return out.join('\n');
+        }
+
+        function makeParagraph(raw) {
+            // Classify before escaping
+            let cls = '';
+            if (raw.startsWith('『')) {
+                cls = ' class="dialogue-alpha"';
+            } else if (raw.startsWith('(') && raw.endsWith(')')) {
+                raw = "'" + raw.slice(1, -1) + "'";
+            }
+
+            let safe = escHtml(raw);
+            safe = safe.replace(/\n/g, '<br>');
+            return '<p' + cls + '>' + safe + '</p>';
+        }
+
+        /* ── Library ──────────────────────── */
+        async function loadLibrary() {
+            dom.loadingState.style.display = '';
+            dom.chapterList.style.display = 'none';
+            dom.errorState.style.display = 'none';
+            dom.emptyState.style.display = 'none';
+            dom.continueCard.style.display = 'none';
+            dom.subtitle.textContent = '';
+
+            try {
+                const res = await fetchRetry('chapters.json');
+                const data = await res.json();
+                state.chapters = data.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
+
+                dom.loadingState.style.display = 'none';
+
+                if (state.chapters.length === 0) {
+                    dom.emptyState.style.display = '';
+                    return;
+                }
+
+                dom.subtitle.textContent = state.chapters.length + '개의 챕터';
+                dom.chapterList.style.display = '';
+                renderChapterList();
+                showContinueReading();
+            } catch {
+                dom.loadingState.style.display = 'none';
+                dom.errorState.style.display = '';
+            }
+        }
+
+        function renderChapterList() {
+            dom.chapterList.innerHTML = '';
+            const readList = load(SK.READ, []);
+
+            state.chapters.forEach((ch, i) => {
+                const el = document.createElement('div');
+                el.className = 'chapter-item';
+                el.tabIndex = 0;
+                el.setAttribute('role', 'button');
+
+                const num = String(ch.chapterNumber || i + 1).padStart(2, '0');
+                const isRead = readList.includes(ch.filename);
+
+                el.innerHTML =
+                    '<span class="ch-num">' + num + '</span>' +
+                    '<span class="ch-title">' + escHtml(ch.title) + '</span>' +
+                    (isRead ? '<span class="ch-read">읽음</span>' : '');
+
+                el.addEventListener('click', () => openChapter(i));
+                el.addEventListener('keydown', e => { if (e.key === 'Enter') openChapter(i); });
+                dom.chapterList.appendChild(el);
+            });
+        }
+
+        function showContinueReading() {
+            const last = load(SK.LAST_READ, null);
+            if (!last) return;
+            const idx = state.chapters.findIndex(c => c.filename === last.filename);
+            if (idx < 0) return;
+            dom.continueTitle.textContent = state.chapters[idx].title;
+            dom.continueCard.style.display = '';
+            dom.continueCard.onclick = () => openChapter(idx);
+        }
+
+        /* ── Reader ───────────────────────── */
+        async function openChapter(idx) {
+            if (idx < 0 || idx >= state.chapters.length) return;
+            state.idx = idx;
+            const ch = state.chapters[idx];
+
+            save(SK.LAST_READ, { filename: ch.filename });
+
+            try {
+                const res = await fetchRetry('chapters/' + encodeURIComponent(ch.filename));
+                const raw = await res.text();
+                const parsed = parseContent(raw);
+                const displayTitle = parsed.title || ch.title;
+
+                dom.readerTitle.textContent = displayTitle;
+                document.title = displayTitle + ' — 까치 리더';
+
+                dom.readerContent.innerHTML =
+                    '<h1 class="chapter-heading">' + escHtml(displayTitle) + '</h1>\n' +
+                    renderBody(parsed.body);
+
+                // Nav
+                dom.prevBtn.disabled = idx === 0;
+                dom.nextBtn.disabled = idx === state.chapters.length - 1;
+                dom.navInfo.textContent = (idx + 1) + ' / ' + state.chapters.length;
+
+                switchView('reader');
+
+                // Restore scroll
+                const positions = load(SK.SCROLL, {});
+                const saved = positions[ch.filename];
+                if (saved != null && saved > 0.01) {
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            const maxY = document.documentElement.scrollHeight - window.innerHeight;
+                            window.scrollTo({ top: saved * maxY, behavior: 'instant' });
+                        });
+                    });
+                } else {
+                    window.scrollTo({ top: 0, behavior: 'instant' });
+                }
+            } catch (e) {
+                console.error('Failed to load chapter:', e);
+            }
+        }
+
+        /* ── View switching ───────────────── */
+        function switchView(view) {
+            state.view = view;
+            dom.libraryView.classList.toggle('active', view === 'library');
+            dom.readerView.classList.toggle('active', view === 'reader');
+            dom.progressBar.style.display = view === 'reader' ? '' : 'none';
+            if (view === 'reader') updateProgress();
+        }
+
+        function goToLibrary() {
+            saveScrollPos();
+            switchView('library');
+            document.title = '까치 리더';
+            loadLibrary();
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+
+        /* ── Navigation ───────────────────── */
+        function nextChapter() {
+            if (state.idx < state.chapters.length - 1) {
+                markRead();
+                saveScrollPos();
+                openChapter(state.idx + 1);
+            }
+        }
+        function prevChapter() {
+            if (state.idx > 0) {
+                saveScrollPos();
+                openChapter(state.idx - 1);
+            }
+        }
+
+        /* ── Scroll tracking ──────────────── */
+        let scrollTimer = null;
+
+        function updateProgress() {
+            if (state.view !== 'reader') return;
+            const top = window.scrollY;
+            const max = document.documentElement.scrollHeight - window.innerHeight;
+            const pct = max > 0 ? (top / max) * 100 : 0;
+            dom.progressBar.style.width = pct + '%';
+            if (pct > 92) markRead();
+        }
+
+        function saveScrollPos() {
+            if (state.view !== 'reader' || state.idx < 0) return;
+            const ch = state.chapters[state.idx];
+            const top = window.scrollY;
+            const max = document.documentElement.scrollHeight - window.innerHeight;
+            const ratio = max > 0 ? top / max : 0;
+            const pos = load(SK.SCROLL, {});
+            pos[ch.filename] = ratio;
+            save(SK.SCROLL, pos);
+        }
+
+        /* ── Read status ──────────────────── */
+        function markRead() {
+            if (state.idx < 0) return;
+            const fn = state.chapters[state.idx].filename;
+            const list = load(SK.READ, []);
+            if (!list.includes(fn)) {
+                list.push(fn);
+                save(SK.READ, list);
+            }
+        }
+
+        /* ── Settings ─────────────────────── */
+        function loadSettings() {
+            state.settings = load(SK.SETTINGS, { fontSize: 18, lineHeight: 1.9 });
+            applySettings();
+        }
+        function applySettings() {
+            const r = document.documentElement.style;
+            r.setProperty('--font-size', state.settings.fontSize + 'px');
+            r.setProperty('--line-height', String(state.settings.lineHeight));
+            if (dom.fontSlider) {
+                dom.fontSlider.value = state.settings.fontSize;
+                dom.fontVal.textContent = state.settings.fontSize + 'px';
+            }
+            if (dom.lhSlider) {
+                dom.lhSlider.value = state.settings.lineHeight;
+                dom.lhVal.textContent = state.settings.lineHeight.toFixed(1);
+            }
+            if (dom.preview) {
+                dom.preview.style.fontSize = state.settings.fontSize + 'px';
+                dom.preview.style.lineHeight = String(state.settings.lineHeight);
+            }
+        }
+
+        function openSettingsPanel() { dom.settingsOvl.style.display = ''; }
+        function closeSettingsPanel() { dom.settingsOvl.style.display = 'none'; }
+
+        /* ── Events ───────────────────────── */
+        function bind() {
+            $('back-btn').addEventListener('click', goToLibrary);
+            dom.prevBtn.addEventListener('click', prevChapter);
+            dom.nextBtn.addEventListener('click', nextChapter);
+
+            $('refresh-btn').addEventListener('click', function () {
+                this.classList.add('spinning');
+                setTimeout(() => this.classList.remove('spinning'), 600);
+                loadLibrary();
+            });
+            $('retry-btn').addEventListener('click', loadLibrary);
+
+            $('settings-btn').addEventListener('click', openSettingsPanel);
+            $('settings-close').addEventListener('click', closeSettingsPanel);
+            dom.settingsOvl.addEventListener('click', e => {
+                if (e.target === dom.settingsOvl) closeSettingsPanel();
+            });
+
+            dom.fontSlider.addEventListener('input', e => {
+                state.settings.fontSize = parseInt(e.target.value, 10);
+                applySettings();
+                save(SK.SETTINGS, state.settings);
+            });
+            dom.lhSlider.addEventListener('input', e => {
+                state.settings.lineHeight = parseFloat(e.target.value);
+                applySettings();
+                save(SK.SETTINGS, state.settings);
+            });
+
+            document.addEventListener('keydown', e => {
+                // Settings overlay
+                if (dom.settingsOvl.style.display !== 'none') {
+                    if (e.key === 'Escape') { closeSettingsPanel(); e.preventDefault(); }
+                    return;
+                }
+                // Reader view
+                if (state.view === 'reader') {
+                    if (e.key === 'ArrowLeft')  { prevChapter(); e.preventDefault(); }
+                    if (e.key === 'ArrowRight') { nextChapter(); e.preventDefault(); }
+                    if (e.key === 'Escape')     { goToLibrary(); e.preventDefault(); }
+                }
+            });
+
+            window.addEventListener('scroll', () => {
+                updateProgress();
+                clearTimeout(scrollTimer);
+                scrollTimer = setTimeout(saveScrollPos, 400);
+            }, { passive: true });
+
+            window.addEventListener('beforeunload', saveScrollPos);
+        }
+
+        /* ── Init ─────────────────────────── */
+        function init() {
+            cacheDom();
+            loadSettings();
+            bind();
+            loadLibrary();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
+    </script>
+</body>
+</html>
