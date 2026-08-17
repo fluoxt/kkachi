@@ -801,7 +801,8 @@
             dom.subtitle.textContent = '';
 
             try {
-                const res = await fetchRetry('chapters.json');
+                const url = 'chapters.json';
+                const res = await fetchRetry(url + '?t=' + Date.now());
                 const data = await res.json();
                 state.chapters = data.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
 
@@ -865,7 +866,8 @@
             save(SK.LAST_READ, { filename: ch.filename });
 
             try {
-                const res = await fetchRetry('chapters/' + encodeURIComponent(ch.filename));
+                const url = 'chapters/' + encodeURIComponent(ch.filename);
+                const res = await fetchRetry(url + '?t=' + Date.now());
                 const raw = await res.text();
                 const parsed = parseContent(raw);
                 let fallbackTitle = ch.filename.replace(/\.md$/i, '');
