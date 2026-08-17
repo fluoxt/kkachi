@@ -741,6 +741,12 @@
             if (tm) {
                 title = tm[1].trim();
                 body = body.replace(/^\s*(?:#\s*)?제\d+화\s+[^\r\n]+\r?\n?/, '');
+            } else {
+                const tm2 = body.match(/^\s*#\s+([^\r\n]+)/m);
+                if (tm2) {
+                    title = tm2[1].trim();
+                    body = body.replace(/^\s*#\s+[^\r\n]+\r?\n?/, '');
+                }
             }
 
             return { fm, title, body: body.trim() };
@@ -862,7 +868,12 @@
                 const res = await fetchRetry('chapters/' + encodeURIComponent(ch.filename));
                 const raw = await res.text();
                 const parsed = parseContent(raw);
-                const displayTitle = parsed.title || ch.title;
+                let fallbackTitle = ch.filename.replace(/\.md$/i, '');
+                const numMatch = fallbackTitle.match(/^0*(\d+)$/);
+                if (numMatch) {
+                    fallbackTitle = '제' + numMatch[1] + '화';
+                }
+                const displayTitle = parsed.title || ch.title || fallbackTitle;
 
                 dom.readerTitle.textContent = displayTitle;
                 document.title = displayTitle + ' — 까치 리더';
